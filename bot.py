@@ -4,7 +4,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # --- CONFIGURATION ---
-TELEGRAM_BOT_TOKEN = 'YOUR_BOT_TOKEN_HERE'  # မိမိ Bot Token ထည့်ရန်
+TELEGRAM_BOT_TOKEN = '8507446809:AAEpBmyx7S7JgL1loGV0qUMgU0Pmuj4JkRs'  # မိမိ Bot Token ထည့်ရန်
 API_URL = "https://ckygjf6r.com/api/webapi/GetTRXNoaverageEmerdList"
 
 HEADERS = {
