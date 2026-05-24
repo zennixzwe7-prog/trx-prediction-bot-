@@ -1,10 +1,11 @@
-FROM python:3.10-slim
+FROM node:20
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY package*.json ./
+
+RUN npm install
 
 COPY . .
 
-CMD ["python", "bot.py"]
+CMD ["npm", "start"]
