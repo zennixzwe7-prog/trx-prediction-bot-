@@ -1,86 +1,98 @@
+
 import requests
 import time
 import urllib3
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# SSL Warning များ မပြအောင် ပိတ်ထားခြင်း (Render ပေါ်တွင် ပိုမိုအဆင်ပြေစေရန်)
+# SSL Warning များအား ပိတ်ထားခြင်း
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURATION ---
-# ⚠️ မိမိ၏ Bot Token ကို အောက်ပါနေရာတွင် သေချာစွာ အစားထိုးပါ
+# ⚠️ သင်၏ Telegram Bot Token ကို အောက်တွင် သေချာစွာ အစားထိုးပါ
 TELEGRAM_BOT_TOKEN = '8732215456:AAGLCJXwTqBV9cIqusCnm7x0OhnPLsi0TU0' 
 API_URL = "https://ckygjf6r.com/api/webapi/GetTRXNoaverageEmerdList"
 
+# ဂိမ်း Server က Cloud Bot မှန်းမသိစေရန် အဆင့်မြင့် ရည်ညွှန်းချက်များ ထည့်သွင်းခြင်း
 HEADERS = {
     "Content-Type": "application/json;charset=UTF-8",
     "Accept": "application/json, text/plain, */*",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Ar-Origin": "https://www.cklottery.top"
+    "Accept-Language": "en-US,en;q=0.9,my;q=0.8",
+    "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+    "Origin": "https://www.cklottery.top",
+    "Referer": "https://www.cklottery.top/",
+    "Sec-Ch-Ua": '"Not-A.Brand";v="99", "Chromium";v="124"',
+    "Sec-Ch-Ua-Mobile": "?1",
+    "Sec-Ch-Ua-Platform": '"Android"',
+    "Sec-Doc-Level": "1"
 }
 
-# --- DYNAMIC API FETCHING ENGINE ---
+# --- BYPASS API FETCHING ENGINE ---
 def get_latest_results():
+    # Session စနစ်သုံးပြီး လူကဲ့သို့ ဝင်ရောက်ခြင်း
+    session = requests.Session()
     try:
-        # စက္ကန့်အလိုက် ပြောင်းလဲနေသော လက်ရှိ Unix Timestamp အား ထုတ်ယူခြင်း
         current_timestamp = int(time.time())
         
-        # API သို့ ပေးပို့မည့် လုံခြုံရေးဆိုင်ရာ Data များ
+        # ⚠️ အကယ်၍ ဤကုဒ်ပြောင်းပြီးမှ မရပါက အောက်ပါ random နှင့် signature ကို Website မှ အသစ်ပြန်ယူရပါမည်
         dynamic_payload = {
             "pageSize": 10,
             "pageNo": 1,
             "typeId": 13,
             "language": 0,
             "random": "5731d15b986d4875955a5cd373cb9e12",
-            "signature": "DA042D6562C9C7451B385E421F23C246", # ⚠️ အကယ်၍ API ပိတ်ပါက Website မှ signature အသစ် ပြန်လဲပေးရန်လိုအပ်သည်
+            "signature": "DA042D6562C9C7451B385E421F23C246",
             "timestamp": current_timestamp
         }
         
-        # verify=False ဖြင့် Cloud Connection Block ဖြစ်ခြင်းကို ကျော်လွှားခြင်း
-        response = requests.post(API_URL, headers=HEADERS, json=dynamic_payload, verify=False, timeout=15)
+        response = session.post(
+            API_URL, 
+            headers=HEADERS, 
+            json=dynamic_payload, 
+            verify=False, 
+            timeout=10
+        )
         
         if response.status_code == 200:
             res_json = response.json()
             if res_json.get('code') == 0:
                 return res_json.get('data', {}).get('data', {}).get('gameslist', [])
             else:
-                print(f"API Error Message: {res_json.get('msg')}")
+                print(f"API Main Error: {res_json.get('msg')}")
                 return []
         else:
-            print(f"Server Response HTTP Error: {response.status_code}")
+            print(f"HTTP Error Code: {response.status_code}")
             return []
     except Exception as e:
-        print(f"Connection Exception Error: {e}")
+        print(f"Exception Occurred: {e}")
         return []
+    finally:
+        session.close()
 
 # --- ADVANCED STATISTICAL PATTERN ANALYSIS ---
 def advanced_pattern_analysis(gameslist):
     if not gameslist or len(gameslist) < 5:
         return None, None, None, None, None
 
-    # ၁။ Trend Momentum Analysis (နောက်ဆုံး ၅ ကြိမ်ထွက်နှုန်းကို တွက်ချက်ခြင်း)
     small_count = sum(1 for g in gameslist[:5] if int(g['number']) <= 4)
     big_count = 5 - small_count
     
-    # ၂။ လက်ရှိ နောက်ဆုံးပွဲစဉ်၏ အချက်အလက်များ
     latest_game = gameslist[0]
     latest_number = int(latest_game['number'])
     latest_colour = latest_game['colour']
     current_issue = int(latest_game['issueNumber'])
     next_issue = current_issue + 1
 
-    # ၃။ Logic Execution for Big/Small
-    if small_count >= 4:  # Small အထွက်များနေသော Trend ဖြစ်လျှင်
+    if small_count >= 4:
         predicted_size = "SMALL 📉"
         safe_numbers = "0, 1, 3"
-    elif big_count >= 4:  # Big အထွက်များနေသော Trend ဖြစ်လျှင်
+    elif big_count >= 4:
         predicted_size = "BIG 📈"
         safe_numbers = "6, 7, 8"
-    else:  # ရလဒ်များ ရောထွေးနေပါက နောက်ဆုံးဂဏန်းကို အခြေခံ၍ Counter-Trend လှည့်တွက်ခြင်း
+    else:
         predicted_size = "BIG 📈" if latest_number <= 4 else "SMALL 📉"
         safe_numbers = "5, 9, 7" if predicted_size == "BIG 📈" else "2, 4, 1"
 
-    # ၄။ Logic Execution for Colour (အရောင်အလှည့်အပြောင်း တွက်ချက်မှု)
     color_streak = 1
     for g in gameslist[1:4]:
         if g['colour'] == latest_colour:
@@ -88,13 +100,12 @@ def advanced_pattern_analysis(gameslist):
         else:
             break
 
-    if color_streak >= 3: # အရောင်တစ်ခုတည်း ဆက်တိုက် ၃ ကြိမ်ထွက်ပြီးပါက ပြောင်းပြန်ထွက်နိုင်ခြေ ပိုများသည်။
+    if color_streak >= 3:
         predicted_colour = "🟢 GREEN" if "red" in latest_colour else "🔴 RED"
     else:
         green_count = sum(1 for g in gameslist[:5] if "green" in g['colour'])
         predicted_colour = "🟢 GREEN" if green_count >= 3 else "🔴 RED"
 
-    # သင်္ချာနည်းအရ ကံထူးနိုင်ခြေအရှိဆုံး Single Hot Number တွက်ချက်ခြင်း
     hot_number = (latest_number + 3) % 10 if predicted_size == "BIG 📈" else (latest_number - 3) % 10
     if hot_number < 0: hot_number = abs(hot_number)
 
@@ -102,7 +113,6 @@ def advanced_pattern_analysis(gameslist):
 
 # --- TELEGRAM INTERFACE ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # လူတိုင်းလွယ်ကူစွာနှိပ်နိုင်မည့် ခလုတ်အား ဖန်တီးခြင်း
     keyboard = [['🔮 Get Prediction']]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
@@ -116,18 +126,23 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_prediction_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text == '🔮 Get Prediction':
-        # သုံးစွဲသူအား ခေတ္တစောင့်ရန် အသိပေးခြင်း
         status_message = await update.message.reply_text("🔄 AI မှ လတ်တလော Patterns များကို တွက်ချက်နေပါသည်... စက္ကန့်အနည်းငယ်စောင့်ပါ။")
         
         gameslist = get_latest_results()
         if not gameslist:
-            await status_message.edit_text("❌ API Data ဆွဲယူရတာ အဆင်မပြေဖြစ်နေပါတယ်။\n(ဂိမ်း Server က သင့် Bot ကို ခေတ္တပိတ်ထားခြင်း သို့မဟုတ် Signature သက်တမ်းကုန်ခြင်း ဖြစ်နိုင်ပါသည်။)")
+            await status_message.edit_text(
+                "❌ API Connection Error ဖြစ်နေဆဲပါဗျာ။\n\n"
+                "💡 *အဘယ်ကြောင့်နည်း-*\n"
+                "ဂိမ်း Website ၏ `signature` အသစ်ပြောင်းသွားခြင်း ဖြစ်နိုင်ပါသည်။ "
+                "ကျေးဇူးပြု၍ သင့် Browser (Inspect Element -> Network) မှတစ်ဆင့် "
+                "လက်ရှိနောက်ဆုံးဖြစ်နေသော `signature` နှင့် `random` တန်ဖန်းကို ကူးယူပြီး Code တွင် လာရောက် Update လုပ်ပေးပါရန် လိုအပ်ပါသည်မိတ်ဆွေ။"
+            )
             return
 
         next_issue, size, colour, numbers, last_game = advanced_pattern_analysis(gameslist)
         
         response_msg = f"""
-🎯 *ANALYSIS COMPLETE (တွက်ချက်မှုပြီးပါပြီ)* 🎯
+🎯 *ANALYSIS COMPLETE* 🎯
 ━━━━━━━━━━━━━━━━━━
 📊 *Last Result (ပြီးခဲ့သောပွဲ):*
 • Issue: `{last_game['issueNumber']}`
@@ -147,13 +162,11 @@ async def handle_prediction_request(update: Update, context: ContextTypes.DEFAUL
         await status_message.edit_text(response_msg, parse_mode="Markdown")
 
 def main():
-    # Bot အား တည်ဆောက်ပြီး မောင်းနှင်ခြင်း
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_prediction_request))
     
-    print("Trx GOD MOD Bot is online and running...")
+    print("Trx GOD MOD Bot is online on Railway...")
     application.run_polling()
 
 if __name__ == "__main__":
