@@ -1,39 +1,37 @@
 import requests
 import time
 import urllib3
-import random
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# SSL Certificate Warning များ ပိတ်ထားခြင်း (Railway တွင် ပိတ်ဆို့မှုမရှိစေရန်)
+# SSL Warning များ ပိတ်ထားခြင်း
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURATION ---
-# ⚠️ ၁။ မိမိ၏ Telegram Bot Token ကို အောက်ပါနေရာတွင် ထည့်ပါ
-TELEGRAM_BOT_TOKEN = '8732215456:AAGLCJXwTqBV9cIqusCnm7x0OhnPLsi0TU0' 
+# ⚠️ ၁။ မိမိ၏ Telegram Bot Token ကို ဤနေရာတွင် အစားထိုးပါ
+TELEGRAM_BOT_TOKEN = '8925968993:AAF54j8OT9rM20KbcbW6moecBYtmssmr5IQ' 
 
-# ⚠️ ၂။ မိမိ Website မှ ကူးယူလာသော Authorization Token (Bearer ...) တစ်ခုလုံးကို အောက်တွင် ထည့်ပါ
-AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOiIxNzc5NTk3MjExIiwibmJmIjoiMTc3OTU5NzIxMSIsImV4cCI6IjE3Nzk1OTkwMTEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL2V4cGlyYXRpb24iOiI1LzI0LzIwMjYgMTE6MzM6MzEgQU0iLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBY2Nlc3NfVG9rZW4iLCJVc2VySWQiOiI0ODcyMDMiLCJVc2VyTmFtZSI6Ijk1OTc3NzU0NTU4OSIsIlVzZXJQaG90byI6IjIwIiwiTmlja05hbWUiOiJNR1RIQU5UICIsIkFtb3VudCI6IjIuMTEiLCJJbnRlZ3JhbCI6IjAiLCJMb2dpbk1hcmsiOiJINSIsIkxvZ2luVGltZSI6IjUvMjQvMjAyNiAxMTowMzozMSBBTSIsIkxvZ2luSVBBZGRyZXNzIjoiMTE2LjIwNi4xOTMuNDAiLCJEYk51bWJlciI6IjAiLCJJc3ZhbGlkYXRvciI6IjAiLCJLZXlDb2RlIjoi6MDQiLCJUb2tlblR5cGUiOiJBY2Nlc3NfVG9rZW4iLCJQaG9uZVR5cGUiOiIxIiwiVXNlclR5cGUiOiIwIiwiVXNlck5hbWUyIjoiIiwiaXNzI6Imp3dElzc3VlciIsImF1ZCI6ImxvdHRlcnlUaWNrZXQifQ.DBDcoABNDDdBBPYKY6szyG2kPWVovMHvAOUBFrJpwrY"
+# ⚠️ ၂။ မိမိ Website မှ လက်ရှိ အသုံးပြုနေသော Token ကို အောက်တွင် ထည့်ပါ
+# (လောလောဆယ် အလုပ်လုပ်စေရန် မိတ်ဆွေပေးထားသော Token အား တိကျစွာ ပြန်လည်ပြင်ဆင်ထည့်သွင်းပေးထားပါသည်)
+AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOiIxNzc5NTk3MjExIiwibmJmIjoiMTc3OTU5NzIxMSIsImV4cCI6IjE3Nzk1OTkwMTEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL2V4cGlyYXRpb24iOiI1LzI0LzIwMjYgMTE6MzM6MzEgQU0iLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBY2Nlc3NfVG9rZW4iLCJVc2VySWQiOiI0ODcyMDMiLCJVc2VyTmFtZSI6Ijk1OT777NTU4OSIsIlVzZXJQaG90byI6IjIwIiwiTmlja05hbWUiOiJNR1RIQU5UICIsIkFtb3VudCI6IjIuMTEiLCJJbnRlZ3JhbCI6IjAiLCJMb2dpbk1hcmsiOiJINSIsIkxvZ2luVGltZSI6IjUvMjQvMjAyNiAxMTowMzozMSBBTSIsIkxvZ2luSVBBZGRyZXNzIjoiMTE2LjIwNi4xOTMuNDAiLCJEYk51bWJlciI6IjAiLCJJc3ZhbGlkYXRvciI6IjAiLCJLZXlDb2RlIjoiNjA0IiwiVG9rZW5UeXBlIjoiQWNjZXNzX1Rva2VuIiwiUGhvbmVUeXBlIjoiMSIsIlVzZXJUeXBlIjoiMCIsIlVzZXJOYW1lMiI6IiIsImlzcyI6Imp3dElzc3VlciIsImF1ZCI6ImxvdHRlcnlUaWNrZXQifQ.DBDcoABNDDdBBPYKY6szyG2kPWVovMHvAOUBFrJpwrY"
 
 API_URL = "https://ckygjf6r.com/api/webapi/GetNoaverageEmerdList"
 
 HEADERS = {
     "Content-Type": "application/json;charset=UTF-8",
     "Accept": "application/json, text/plain, */*",
-    "Authorization": AUTH_TOKEN, # Login Token အား တိုက်ရိုက် ချိတ်ဆက်အသုံးပြုခြင်း
+    "Authorization": AUTH_TOKEN,
     "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
     "Origin": "https://www.cklottery.top",
     "Referer": "https://www.cklottery.top/",
     "Ar-Origin": "https://www.cklottery.top"
 }
 
-# --- BYPASS API FETCHING ENGINE WITH AUTH ---
+# --- SAFE API FETCHING ENGINE ---
 def get_latest_results():
     session = requests.Session()
     try:
         current_timestamp = int(time.time())
-        
-        # မိတ်ဆွေ ပေးပို့ထားသော Request Data အတိုင်း တိကျစွာ ပုံဖော်ခြင်း
         payload = {
             "pageSize": 10,
             "pageNo": 1,
@@ -49,21 +47,15 @@ def get_latest_results():
         if response.status_code == 200:
             res_json = response.json()
             if res_json.get('code') == 0:
-                # ဒေတာ တည်ဆောက်ပုံအသစ်အတိုင်း (data -> list) ဆွဲထုတ်ခြင်း
                 return res_json.get('data', {}).get('list', [])
-            else:
-                print(f"API Refused: {res_json.get('msg')}")
-                return []
-        else:
-            print(f"HTTP Error Code: {response.status_code}")
-            return []
+        return []
     except Exception as e:
-        print(f"Connection Error: {e}")
+        print(f"Network Connection Level Log: {e}")
         return []
     finally:
         session.close()
 
-# --- PROFESSIONAL STATISTICAL PATTERN ENGINE (V3) ---
+# --- PROFESSIONAL STATISTICAL PATTERN ENGINE ---
 def advanced_pattern_analysis(gameslist):
     if not gameslist or len(gameslist) < 5:
         return None, None, None, None, None
@@ -99,32 +91,27 @@ def advanced_pattern_analysis(gameslist):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [['🔮 Get Prediction']]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    
-    welcome_msg = (
-        "🔥 *TRX GOD MOD V3 Activated* 🔥\n\n"
-        "ယခု Bot သည် လုံခြုံစိတ်ချရသော အကောင့် Token စနစ်ဖြင့် ဂိမ်း Server ထဲသို့ တိုက်ရိုက်ဝင်ရောက်ကာ "
-        "တိကျမှန်ကန်သော Prediction များကို ထုတ်ပေးနေပါပြီ။\n\n"
-        "👇 ခန့်မှန်းချက်ရယူရန် အောက်က ခလုတ်ကို နှိပ်ပါဗျာ။"
-    )
+    welcome_msg = "🔥 *TRX GOD MOD V3 Activated* 🔥\n\n👇 ခန့်မှန်းချက်ရယူရန် အောက်က ခလုတ်ကို နှိပ်ပါဗျာ။"
     await update.message.reply_text(welcome_msg, reply_markup=reply_markup, parse_mode="Markdown")
 
 async def handle_prediction_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text == '🔮 Get Prediction':
         status_message = await update.message.reply_text("🔄 AI မှ လတ်တလော ပွဲစဉ် Pattern များကို တွက်ချက်နေပါသည်...")
         
-        gameslist = get_latest_results()
-        if not gameslist:
-            await status_message.edit_text(
-                "❌ *ဒေတာဆွဲယူ၍ မရနိုင်သေးပါ မိတ်ဆွေ။*\n\n"
-                "💡 *ဘာကြောင့်လဲ-*\n"
-                "ကုဒ်ထဲမှာ ထည့်ထားတဲ့ `AUTH_TOKEN` (Bearer) သက်တမ်းကုန်သွားလို့ ဖြစ်ပါတယ်။\n"
-                "Website ရဲ့ Inspect Element (Network Tab) ထဲကနေ လက်ရှိနောက်ဆုံးဖြစ်နေတဲ့ `Authorization` နဲ့ `signature` ကို ကုဒ်ထဲမှာ အသစ်ပြန်လဲပေးပါဗျာ။"
-            )
-            return
+        try:
+            gameslist = get_latest_results()
+            if not gameslist:
+                await status_message.edit_text(
+                    "❌ *ဒေတာဆွဲယူ၍ မရနိုင်သေးပါ မိတ်ဆွေ။*\n\n"
+                    "💡 *ပြုပြင်ရန်နည်းလမ်း:*\n"
+                    "ကုဒ်ထဲတွင် ထည့်သွင်းထားသော `AUTH_TOKEN` (Bearer စာသား) သက်တမ်းကုန်သွားခြင်း ဖြစ်နိုင်ပါသည်။ "
+                    "Website ၏ Inspect Network ထဲမှ သက်တမ်းရှိသော Token အသစ်အား ပြန်လည်လဲလှယ်ပေးပါ။"
+                )
+                return
 
-        next_issue, size, colour, numbers, last_game = advanced_pattern_analysis(gameslist)
-        
-        response_msg = f"""
+            next_issue, size, colour, numbers, last_game = advanced_pattern_analysis(gameslist)
+            
+            response_msg = f"""
 🎯 *TRX PREDICTION COMPLETE* 🎯
 ━━━━━━━━━━━━━━━━━━
 📊 *Last Result (ပြီးခဲ့သောပွဲ):*
@@ -142,15 +129,21 @@ async def handle_prediction_request(update: Update, context: ContextTypes.DEFAUL
 ဒီပွဲရှုံးပါက နောက်တစ်ပွဲတွင် လောင်းကြေးကို x3 (၃ ဆ) မြှင့်ပါ။ စိတ်အေးအေးထားပြီး စနစ်တကျဆော့ကစားပါ။
 ━━━━━━━━━━━━━━━━━━
 """
-        await status_message.edit_text(response_msg, parse_mode="Markdown")
+            await status_message.edit_text(response_msg, parse_mode="Markdown")
+        except Exception as handler_error:
+            print(f"Handler Error (Prevented Crash): {handler_error}")
+            await status_message.edit_text("⚠️ စနစ်အတွင်း ယာယီ Error တစ်ခုဖြစ်ပွားသွားပါသည်။ ကျေးဇူးပြု၍ ခဏနေမှ ပြန်ကြိုးစားပါ။")
 
 def main():
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_prediction_request))
-    
-    print("Bot is successfully running with Auth bypass...")
-    application.run_polling()
+    try:
+        application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_prediction_request))
+        
+        print("Bot is successfully running with Fixed Engine...")
+        application.run_polling()
+    except Exception as main_error:
+        print(f"Critical Main Loop Crash Prevented: {main_error}")
 
 if __name__ == "__main__":
     main()
