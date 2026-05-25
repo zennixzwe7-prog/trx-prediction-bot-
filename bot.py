@@ -1,56 +1,130 @@
 import time
 import requests
-import json
 from datetime import datetime
 import sys
 
-URL = "https://ckygjf6r.com/api/webapi/GetNoaverageEmerdList"
+# =====================================================================
+# 🔑 CONFIGURATION (သင့်ရဲ့ Token များကို ဒီနေရာမှာ ထည့်သွင်းပါ)
+# =====================================================================
+# ၁။ ဂိမ်းဆွဲမယ့် API Bearer Token
+GAME_API_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOiIxNzc5NjczNTAxIiwibmJmIjoiMTc3OTY3MzUwMSIsImV4cCI6IjE3Nzk2NzUzMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRလွှမ်းမိုးမှုရှိသောလော့ထရီတိုကင်"
 
-HEADERS = {
-    "Content-Type": "application/json;charset=UTF-8",
-    "Accept": "application/json, text/plain, */*",
-    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOiIxNzc5NjczNTAxIiwibmJmIjoiMTc3OTY3MzUwMSIsImV4cCI6IjE3Nzk2NzUzMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL2V4cGlyYXRpb24iOiI1LzI1LzIwMjYgODo0NTowMSBBTSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZЕНИRmdpY2Uvcm9sZSI6IkFjY2Vzc19Ub2tlbiIsIlVzZXJJZCI6IjQ4NzIwMyIsIlVzZXJOYW1lIjoiOTU5Nzc3NTQ1NTg5IiwiVXNlclBob3RvIjoiMjAiLCJOaWNrTmFtZSI6Ik1HVEhBTlQgIiwiQW1vdW50IjoiMi42MSIsIkludGVncmFsIjoiMCIsIkxvZ2luTWFyayI6Ikg1IiwiTG9naW5UaW1lIjoiNS8yNS8yMDI2IDg6MTU6MDEgQU0iLCJMb2dpbklQQWRkcmVzcyI6IjExNi4y00Ni4xOTMuNDAiLCJEYk51bWJlciI6IjAiLCJJc3ZhbGlkYXRvciI6IjAiLCiS2V5Q29kZSI6IjYwNSIsIlRva2VuVHlwZSI6IkFjY2Vzc19Ub2tlbiIsIlBob25lVHlwZSI6IjEiLCJVc2VyVHlwZSI6IjAiLCJVc2VyTmFtZTIiOiIiLCJpc3MiOiJqd3RJc3N1ZXIiLCJhdWQiOiJsb3R0ZXJ5VGlja2V0In0.x3qj70HmHJKnSsYTI08LqurJ-KB4W7e0syYMwPWfbvE",
-    "Ar-Origin": "https://www.cklottery.top",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-}
+# ၂။ Telegram BotFather ဆီကရတဲ့ Bot Token
+TELEGRAM_BOT_TOKEN = "8732215456:AAGLCJXwTqBV9cIqusCnm7x0OhnPLsi0TU0"
 
-PAYLOAD = {
-    "pageSize": 10,
-    "pageNo": 1,
-    "typeId": 30,
-    "language": 0,
-    "random": "be8d0ae92c154507a735d86a2d792cd3",
-    "signature": "DBDC04A4BEB3AAAB575F34FD0B4C6872",
-    "timestamp": 1779674033
-}
+# ၃။ သင့်ရဲ့ Telegram User ID (သို့မဟုတ်) Channel Username (ဥပမာ- "@my_channel")
+TELEGRAM_CHAT_ID = "8193986737"
+# =====================================================================
 
-def fetch_bot_data():
-    print(f"\n[+] Fetching Data at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}...", flush=True)
+GAME_URL = "https://ckygjf6r.com/api/webapi/GetNoaverageEmerdList"
+session = requests.Session()
+
+class Colors:
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    YELLOW = '\033[93m'
+    BOLD = '\033[1m'
+    END = '\033[0m'
+
+# နောက်ဆုံးထွက်ထားတဲ့ ပွဲစဉ် (Issue Number) ကို မှတ်ထားဖို့ Variable
+last_checked_issue = None
+
+def send_telegram_message(text):
+    """ Telegram Chat/Channel ထံသို့ စာသားလှမ်းပို့ပေးသည့် Function """
+    tg_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": text,
+        "parse_mode": "Markdown" # စာသားတွေကို အမည်းရောင်၊ စောင်းရောင် စတိုင်ဖော်လို့ရအောင်
+    }
     try:
-        response = requests.post(URL, json=PAYLOAD, headers=HEADERS, timeout=15)
+        res = requests.post(tg_url, json=payload, timeout=10)
+        if res.status_code == 200:
+            print(f"{Colors.GREEN}[✓] Telegram သို့ Message ပို့ပြီးပါပြီ။{Colors.END}", flush=True)
+        else:
+            print(f"{Colors.RED}[-] Telegram Send Failed: {res.text}{Colors.END}", flush=True)
+    except Exception as e:
+        print(f"{Colors.RED}[-] Telegram Connection Error: {e}{Colors.END}", flush=True)
+
+def fetch_data():
+    global last_checked_issue
+    current_timestamp = int(time.time())
+    
+    headers = {
+        "Content-Type": "application/json;charset=UTF-8",
+        "Accept": "application/json, text/plain, */*",
+        "Authorization": f"Bearer {GAME_API_TOKEN}" if not GAME_API_TOKEN.startswith("Bearer ") else GAME_API_TOKEN,
+        "Ar-Origin": "https://www.cklottery.top",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
+    payload = {
+        "pageSize": 1, # Telegram ထဲ ရှုပ်မနေအောင် နောက်ဆုံးထွက်တဲ့ ၁ ကြိမ်စာပဲ ဖတ်မယ်
+        "pageNo": 1,
+        "typeId": 30,
+        "language": 0,
+        "random": "be8d0ae92c154507a735d86a2d792cd3",
+        "signature": "DBDC04A4BEB3AAAB575F34FD0B4C6872",
+        "timestamp": current_timestamp
+    }
+
+    try:
+        response = session.post(GAME_URL, json=payload, headers=headers, timeout=15)
         
         if response.status_code == 200:
             result = response.json()
             if result.get("code") == 0 and "data" in result:
                 game_list = result["data"].get("list", [])
-                print(f"Server Time: {result.get('serviceNowTime')}", flush=True)
-                print("-" * 50, flush=True)
                 
-                for item in game_list:
-                    issue = item.get("issueNumber")
-                    num = item.get("number")
-                    colour = item.get("colour")
-                    print(f"Issue: {issue} | Number: {num} | Colour: {colour}", flush=True)
+                if game_list:
+                    latest_game = game_list[0]
+                    issue = latest_game.get("issueNumber", "N/A")
+                    num = latest_game.get("number", "N/A")
+                    colour = latest_game.get("colour", "N/A").upper()
+                    premium = latest_game.get("premium", "N/A")
+                    server_time = result.get('serviceNowTime', 'Unknown')
+
+                    # ပွဲစဉ်အသစ် ထွက်လာမှသာ Telegram ကို ပို့ပေးမည့် စနစ် (Message ထပ်မနေအောင်)
+                    if issue != last_checked_issue:
+                        last_checked_issue = issue
+                        
+                        # ရလဒ်အလိုက် အလှဆင်မည့် Emoji ရွေးချယ်ခြင်း
+                        emoji = "🟢" if "GREEN" in colour else "🔴" if "RED" in colour else "🟣"
+                        if "VIOLET" in colour and ("RED" in colour or "GREEN" in colour):
+                            emoji = "🔮"
+
+                        # Telegram ထဲသို့ ရောက်မည့် စတိုင်မိုက် Markdown စာသား ပုံစံ
+                        tg_text = (
+                            f"🎰 *30S LOTTERY RESULT* 🎰\n"
+                            f"━━━━━━━━━━━━━━━━━━\n"
+                            f"🆔 *Issue:* `{issue}`\n"
+                            f"🔢 *Number:* `{num}`\n"
+                            f"🎨 *Colour:* {emoji} `{colour}`\n"
+                            f"💰 *Premium:* `{premium}`\n"
+                            f"━━━━━━━━━━━━━━━━━━\n"
+                            f"🕒 *Time:* `{server_time}`"
+                        )
+                        
+                        # Terminal Log မှာ ပြသခြင်း
+                        print(f"{Colors.BOLD}{Colors.CYAN}\n[+] New Result Detected ({issue})! Sending to Telegram...{Colors.END}", flush=True)
+                        
+                        # Telegram သို့ လှမ်းပို့ခြင်း
+                        send_telegram_message(tg_text)
+                    else:
+                        print(".", end="", flush=True) # ပွဲစဉ်အသစ်မရှိသေးရင် အစက်လေးတွေပဲ ပြနေမယ်
             else:
-                print(f"[-] API Error Message: {result.get('msg')}", flush=True)
+                print(f"\n{Colors.RED}[-] API Alert: {result.get('msg')}{Colors.END}", flush=True)
         else:
-            print(f"[-] HTTP Error: Status Code {response.status_code}", flush=True)
+            print(f"\n{Colors.RED}[-] HTTP Error: Code {response.status_code}{Colors.END}", flush=True)
             
     except Exception as e:
-        print(f"[-] Error occurred: {e}", flush=True)
+        print(f"\n{Colors.RED}[-] Network Error: {e}{Colors.END}", flush=True)
 
 if __name__ == "__main__":
-    print("[*] Starting 30S API Bot on Railway...", flush=True)
+    print(f"{Colors.BOLD}{Colors.GREEN}[*] 🟢 System Online with Telegram Gateway Enabled!{Colors.END}", flush=True)
+    print("[*] Waiting for new lottery rounds...", flush=True)
+    
     while True:
-        fetch_bot_data()
-        time.sleep(30)
+        fetch_data()
+        time.sleep(5) # API ကို ၅ စက္ကန့်တစ်ခါ Live စစ်ပြီး ပွဲသစ်ထွက်တာနဲ့ တန်းဖတ်မည်
