@@ -1,9 +1,8 @@
 import os
-import sqlite3
 import asyncio
 import logging
-import requests
 import random
+import requests
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -22,9 +21,9 @@ from telegram.ext import (
     ContextTypes
 )
 
-# =====================================
+# =========================================
 # CONFIG
-# =====================================
+# =========================================
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
@@ -34,44 +33,24 @@ API_URL = "https://ckygjf6r.com/api/webapi/GetNoaverageEmerdList"
 
 AUTH_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOiIxNzc5NjczNTAxIiwibmJmIjoiMTc3OTY3MzUwMSIsImV4cCI6IjE3Nzk2NzUzMDEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL2V4cGlyYXRpb24iOiI1LzI1LzIwMjYgODo0NTowMSBBTSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkFjY2Vzc19Ub2tlbiIsIlVzZXJJZCI6IjQ4NzIwMyIsIlVzZXJOYW1lIjoiOTU5Nzc3NTQ1NTg5IiwiVXNlclBob3RvIjoiMjAiLCJOaWNrTmFtZSI6Ik1HVEhBTlQgIiwiQW1vdW50IjoiMi42MSIsIkludGVncmFsIjoiMCIsIkxvZ2luTWFyayI6Ikg1IiwiTG9naW5UaW1lIjoiNS8yNS8yMDI2IDg6MTU6MDEgQU0iLCJMb2dpbklQQWRkcmVzcyI6IjExNi4yMDYuMTkzLjQwIiwiRGJOdW1iZXIiOiIwIiwiSXN2YWxpZGF0b3IiOiIwIiwiS2V5Q29kZSI6IjYwNSIsIlRva2VuVHlwZSI6IkFjY2Vzc19Ub2tlbiIsIlBob25lVHlwZSI6IjEiLCJVc2VyVHlwZSI6IjAiLCJVc2VyTmFtZTIiOiIiLCJpc3MiOiJqd3RJc3N1ZXIiLCJhdWQiOiJsb3R0ZXJ5VGlja2V0In0.x3qj70HmHJKnSsYTI08LqurJ-KB4W7e0syYMwPWfbvE"
 
-# =====================================
+# =========================================
 # LOGGING
-# =====================================
+# =========================================
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 
-# =====================================
-# DATABASE
-# =====================================
-
-conn = sqlite3.connect(
-    "prediction.db",
-    check_same_thread=False
-)
-
-cursor = conn.cursor()
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS stats (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    result TEXT
-)
-""")
-
-conn.commit()
-
-# =====================================
-# BOT
-# =====================================
+# =========================================
+# TELEGRAM BOT
+# =========================================
 
 bot = Bot(token=BOT_TOKEN)
 
-# =====================================
-# FETCH API
-# =====================================
+# =========================================
+# API FETCH
+# =========================================
 
 def fetch_data():
 
@@ -82,8 +61,8 @@ def fetch_data():
         "pageNo": 1,
         "typeId": 30,
         "language": 0,
-        "random": "4f5964a967404a6f99ac670b4ee94cea",
-        "signature": "65FAAD36877A52BC58E7FD52D4552743",
+        "random": "be8d0ae92c154507a735d86a2d792cd3",
+        "signature": "DBDC04A4BEB3AAAB575F34FD0B4C6872",
         "timestamp": timestamp
     }
 
@@ -91,7 +70,12 @@ def fetch_data():
         "Content-Type": "application/json;charset=UTF-8",
         "Accept": "application/json, text/plain, */*",
         "Authorization": f"Bearer {AUTH_TOKEN}",
-        "Ar-Origin": "https://www.cklottery.top"
+        "Ar-Origin": "https://www.cklottery.top",
+        "User-Agent": (
+            "Mozilla/5.0 (Linux; Android 10; Mobile) "
+            "AppleWebKit/537.36 Chrome/124.0.0.0 "
+            "Mobile Safari/537.36"
+        )
     }
 
     response = requests.post(
@@ -101,20 +85,29 @@ def fetch_data():
         timeout=15
     )
 
+    print("STATUS:", response.status_code)
+    print("RESPONSE:", response.text)
+
+    if response.status_code != 200:
+        raise Exception(f"HTTP ERROR {response.status_code}")
+
+    if not response.text.strip():
+        raise Exception("EMPTY RESPONSE")
+
     return response.json()
 
-# =====================================
-# SMART ANALYSIS
-# =====================================
+# =========================================
+# PREDICTION LOGIC
+# =========================================
 
 def analyze_prediction(numbers):
 
-    last = numbers[:5]
+    latest = numbers[:5]
 
-    red_count = len([x for x in last if x in [0,2,4,6,8]])
-    green_count = len([x for x in last if x in [1,3,5,7,9]])
+    avg = sum(latest) / len(latest)
 
-    avg = sum(last) / len(last)
+    red = len([x for x in latest if x in [0,2,4,6,8]])
+    green = len([x for x in latest if x in [1,3,5,7,9]])
 
     # BIG SMALL
 
@@ -125,7 +118,7 @@ def analyze_prediction(numbers):
 
     # COLOR
 
-    if red_count > green_count:
+    if red > green:
         color = "GREEN"
     else:
         color = "RED"
@@ -136,9 +129,9 @@ def analyze_prediction(numbers):
 
     return big_small, color, prediction_number
 
-# =====================================
+# =========================================
 # GET PREDICTION
-# =====================================
+# =========================================
 
 def get_prediction():
 
@@ -150,8 +143,8 @@ def get_prediction():
 
         numbers = []
 
-        for g in games:
-            numbers.append(int(g["number"]))
+        for game in games:
+            numbers.append(int(game["number"]))
 
         big_small, color, number = analyze_prediction(numbers)
 
@@ -160,52 +153,28 @@ def get_prediction():
         ).strftime("%Y-%m-%d %I:%M:%S %p")
 
         return {
+            "time": current_time,
             "period": games[0]["issueNumber"],
             "prediction": big_small,
             "color": color,
             "number": number,
-            "status": "SUCCESS",
-            "time": current_time
+            "status": "SUCCESS"
         }
 
     except Exception as e:
 
         return {
+            "time": "-",
             "period": "-",
             "prediction": "-",
             "color": "-",
             "number": "-",
-            "status": str(e),
-            "time": "-"
+            "status": str(e)
         }
 
-# =====================================
-# STATS
-# =====================================
-
-def get_stats():
-
-    cursor.execute(
-        "SELECT result FROM stats"
-    )
-
-    rows = cursor.fetchall()
-
-    wins = 0
-    loses = 0
-
-    for r in rows:
-
-        if r[0] == "WIN":
-            wins += 1
-        else:
-            loses += 1
-
-    return wins, loses
-
-# =====================================
-# START
-# =====================================
+# =========================================
+# START COMMAND
+# =========================================
 
 async def start(
     update: Update,
@@ -219,26 +188,19 @@ async def start(
                 "🎯 Predict",
                 callback_data="predict"
             )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "📊 Stats",
-                callback_data="stats"
-            )
         ]
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
-        "🤖 Myanmar Prediction Bot Online",
+        "🤖 TRX GOD MOD ONLINE",
         reply_markup=reply_markup
     )
 
-# =====================================
-# BUTTONS
-# =====================================
+# =========================================
+# BUTTON HANDLER
+# =========================================
 
 async def button(
     update: Update,
@@ -249,11 +211,9 @@ async def button(
 
     await query.answer()
 
-    if query.data == "predict":
+    result = get_prediction()
 
-        result = get_prediction()
-
-        text = f"""
+    text = f"""
 🔥 LIVE PREDICTION
 
 ⏰ MM Time: {result['time']}
@@ -267,26 +227,11 @@ async def button(
 ✅ Status: {result['status']}
 """
 
-        await query.edit_message_text(text)
+    await query.edit_message_text(text)
 
-    elif query.data == "stats":
-
-        wins, loses = get_stats()
-
-        text = f"""
-📊 BOT STATS
-
-🏆 Wins: {wins}
-❌ Loses: {loses}
-
-📈 Total: {wins + loses}
-"""
-
-        await query.edit_message_text(text)
-
-# =====================================
+# =========================================
 # /predict
-# =====================================
+# =========================================
 
 async def predict(
     update: Update,
@@ -296,7 +241,7 @@ async def predict(
     result = get_prediction()
 
     text = f"""
-🎯 PREDICTION RESULT
+🔥 LIVE PREDICTION
 
 ⏰ MM Time: {result['time']}
 
@@ -311,9 +256,9 @@ async def predict(
 
     await update.message.reply_text(text)
 
-# =====================================
+# =========================================
 # AUTO SIGNAL
-# =====================================
+# =========================================
 
 async def auto_prediction():
 
@@ -342,7 +287,7 @@ async def auto_prediction():
                 text=text
             )
 
-            print("Signal Sent")
+            print("SIGNAL SENT")
 
         except Exception as e:
 
@@ -351,9 +296,9 @@ async def auto_prediction():
         # EVERY 30 SECONDS
         await asyncio.sleep(30)
 
-# =====================================
+# =========================================
 # MAIN
-# =====================================
+# =========================================
 
 async def main():
 
@@ -384,9 +329,9 @@ async def main():
     while True:
         await asyncio.sleep(3600)
 
-# =====================================
+# =========================================
 # RUN
-# =====================================
+# =========================================
 
 if __name__ == "__main__":
 
