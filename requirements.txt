@@ -1,2 +1,2 @@
-python-telegram-bot==20.8
-yt-dlp==2024.05.27
+python-telegram-bot==20.7
+requests
